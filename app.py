@@ -1,33 +1,24 @@
-from flask import Flask, jsonify, request
-from flask_cors import CORS  # Import the CORS extension
-import get_gemini_response
+from dotenv import load_dotenv
+load_dotenv()  # loading all the environment 
 
-app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes in your Flask app
+import os
+import google.generativeai as genai 
 
-# Your Gemini-related imports and configuration here
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-class HealthInfo:
-    Pedometer: int
-    CalorieBurnt: int
-    WaterCount: int
-    HeartRate: int
-    currWgt: int
-    tgWgt: int
-    Question: str
+model = genai.GenerativeModel("gemini-pro")
 
-@app.route('/get_response', methods=['GET'])
-def get_response():
-    response = {"response": get_gemini_response.rs()}
-    return jsonify(response)
+def get_gemini_response(question, max_lines=5):
+    response = model.generate_content(question)
+    response_lines = response.text.split('\n')[:max_lines]  # Get the first 5 lines of the response
+    # Filter out lines that start with a template or heading
+    response_comments = [line for line in response_lines if not line.startswith("Start") and not line.startswith("Increase") and not line.startswith("Eat") and not line.startswith("Incorporate")]
 
-@app.route('/ai/questions', methods=['POST'])
-def receiveReq():
-    data = request.json  # Get JSON data from the request
-    # Access data attributes as needed
-    response = {"response": get_gemini_response.rs(data.get('Pedometer'), data.get('CalorieBurnt'), data.get('WaterCount'), data.get('HeartRate'), data.get('currWgt'), data.get('tgWgt'), data.get('Question'))}
-    return jsonify(response)
+    return '\n'.join(response_comments)
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+
+
+def response():
+    response = get_gemini_response("What is the capital of India?")
+    print(response)
 
